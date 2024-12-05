@@ -1,0 +1,19 @@
+# Virtual environment folder
+env/
+
+# Python bytecode files
+__pycache__/
+*.pyc
+*.pyo
+
+# Logs and system files
+*.log
+*.sqlite3
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# IDE-specific files
+.vscode/
+.idea/
