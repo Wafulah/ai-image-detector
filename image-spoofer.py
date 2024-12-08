@@ -6,7 +6,7 @@ import os
 import multiprocessing
 
 
-# Function to calculate the hash of an image file
+# Function to calculate the hash of a file
 def calculate_file_hash(file_path):
     with open(file_path, "rb") as f:
         file_data = f.read()
@@ -29,15 +29,16 @@ def attempt_modification(args):
     exif_dict["Exif"][spoofing_key] = f"Attempt {attempt}".encode("utf-8")
 
     # Save the modified image with updated metadata
-    modified_exif_bytes = piexif.dump(exif_dict)
-    image.save(output_path, exif=modified_exif_bytes)
+    temp_output_path = output_path  # Use the same output file for temp saving
+    image.save(temp_output_path, exif=piexif.dump(exif_dict))
 
     # Calculate the hash of the modified file
-    modified_hash = calculate_file_hash(output_path)
+    modified_hash = calculate_file_hash(temp_output_path)
 
     # Check if the hash starts with the target prefix
     if modified_hash.startswith(target_prefix):
         return modified_hash
+
     return None
 
 
@@ -65,10 +66,15 @@ def modify_metadata_for_target_hash(input_path, target_prefix, output_path, max_
 # Main function with argparse for command-line interaction
 def main():
     parser = argparse.ArgumentParser(description="Image Hash Spoofing Tool")
-    parser.add_argument("target_prefix", type=str, help="Desired hash prefix (hexstring)")
+    parser.add_argument("target_prefix", type=str, help="Desired hash prefix (hexstring, without 0x)")
     parser.add_argument("input_image", type=str, help="Path to the input image")
     parser.add_argument("output_image", type=str, help="Path to save the modified image")
     args = parser.parse_args()
+
+    # Validate target_prefix
+    if not all(c in "0123456789abcdef" for c in args.target_prefix.lower()):
+        print("Error: target_prefix must be a valid hex string.")
+        return
 
     # Perform hash spoofing
     try:
