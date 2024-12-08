@@ -1,67 +1,61 @@
-# Image Hash Spoofing Tool
+# Image Hash Spoofing Tool: Simulated Annealing with Multiprocessing
 
 ## Overview
-This tool provides a robust mechanism to modify image metadata using **Simulated Annealing** with multiprocessing to achieve a target hash prefix. It is ideal for applications where file integrity verification is critical, such as:
 
-- Watermarking
-- Digital rights management
-- Forensic research
+This tool is a Python-based implementation that modifies an image's metadata to achieve a desired **SHA-512 hash prefix**. It combines **Simulated Annealing** and **Multiprocessing** for efficient, parallelized exploration of the solution space. By using this tool, you can experiment with cryptographic concepts like hash collisions and explore metadata manipulation in images.
 
-By integrating cryptographic techniques, advanced optimization methods, and parallel processing, this script showcases state-of-the-art problem-solving in Python.
-
-## Features
-
-### Simulated Annealing Optimization
-- Implements a probabilistic method to explore metadata modifications, balancing exploration and exploitation.
-- Incorporates cooling mechanisms to converge on optimal solutions.
-
-### Multiprocessing
-- Uses multiple workers to parallelize attempts, significantly improving performance for large search spaces.
-
-### Robust CLI
-- Configurable parameters for hash prefix, temperature, cooling rate, and the number of workers.
-
-### Metadata Manipulation
-- Uses the `piexif` library to inject modifications into EXIF metadata without altering image quality.
-
-## Requirements
-The script requires the following dependencies:
-
-- **Python** 3.7+
-- **Pillow**: `pip install pillow`
-- **piexif**: `pip install piexif`
+---
 
 ## How It Works
 
-### Process Flow
+### General Workflow
 
-1. **Input**: Provide an image file and a target hash prefix to achieve.
-2. **Hash Calculation**: Uses `SHA-512` to calculate the image's hash.
+1. **Input**:
+   - The user provides:
+     - `An input image file`: The image whose metadata will be modified.
+     - `A target hash prefix`: The desired starting characters of the hash.
+   - Optional parameters include:
+     - Maximum attempts.
+     - Number of workers.
+     - Initial temperature for simulated annealing.
+     - Cooling rate for temperature decay.
+
+2. **Hash Calculation**:
+   - The image's hash is computed using the **SHA-512 algorithm**.
+
 3. **Simulated Annealing**:
-   - Randomly modifies the EXIF metadata.
-   - Evaluates the hash against the target prefix.
-   - Uses probabilistic acceptance for non-optimal solutions based on temperature.
-4. **Multiprocessing**: Distributes the simulated annealing process across multiple workers.
-5. **Output**: Saves the modified image once the target hash prefix is achieved.
+   - The EXIF metadata of the image is **randomly modified**.
+   - Each modification is evaluated against the target prefix.
+   - A probabilistic acceptance criterion ensures that non-optimal changes are sometimes accepted, allowing the algorithm to escape local minima.
+
+4. **Multiprocessing**:
+   - The simulated annealing process is distributed across multiple workers, each running independently with a unique random seed.
+
+5. **Output**:
+   - Once the desired hash prefix is achieved, the tool saves the modified image to the specified location.
+
+---
 
 ## Installation
 
-Clone the repository:
+### Clone the Repository
 
 ```bash
 git clone https://github.com/your-username/image-hash-spoofing.git
 cd image-hash-spoofing
 ```
 
-Install dependencies:
+### Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
+---
+
 ## Usage
 
-Run the script from the command line with the following syntax:
+Run the script from the command line using the following syntax:
 
 ```bash
 python hash_spoof.py <target_prefix> <input_image> <output_image> [--max_attempts N] [--num_workers W] [--initial_temp T] [--cooling_rate R]
@@ -69,15 +63,15 @@ python hash_spoof.py <target_prefix> <input_image> <output_image> [--max_attempt
 
 ### Arguments
 
-| Argument       | Type    | Description                                                  |
-|----------------|---------|--------------------------------------------------------------|
-| `target_prefix`| String  | Desired hash prefix (hexadecimal).                           |
-| `input_image`  | String  | Path to the input image.                                     |
-| `output_image` | String  | Path to save the modified image.                            |
-| `--max_attempts`| Integer | Maximum number of modification attempts (default: 100,000). |
-| `--num_workers`| Integer | Number of parallel workers for multiprocessing (default: 4). |
-| `--initial_temp`| Float   | Initial temperature for simulated annealing (default: 1000).|
-| `--cooling_rate`| Float   | Cooling rate for temperature decay (default: 0.99).         |
+| Argument         | Type    | Description                                                 |
+|------------------|---------|-------------------------------------------------------------|
+| `target_prefix`  | String  | Desired hash prefix (hexadecimal).                          |
+| `input_image`    | String  | Path to the input image.                                    |
+| `output_image`   | String  | Path to save the modified image.                           |
+| `--max_attempts` | Integer | Maximum number of modification attempts (default: 100,000).|
+| `--num_workers`  | Integer | Number of parallel workers for multiprocessing (default: 4).|
+| `--initial_temp` | Float   | Initial temperature for simulated annealing (default: 1000).|
+| `--cooling_rate` | Float   | Cooling rate for temperature decay (default: 0.99).        |
 
 ### Example
 
@@ -85,61 +79,138 @@ python hash_spoof.py <target_prefix> <input_image> <output_image> [--max_attempt
 python hash_spoof.py f8b2 "input.jpg" "output.jpg" --max_attempts 50000 --num_workers 6 --initial_temp 1200 --cooling_rate 0.98
 ```
 
+---
+
 ## Code Breakdown
 
 ### Key Components
 
-#### `calculate_file_hash(file_path)`
-- Reads a file in binary mode and computes its SHA-512 hash.
+1. **`calculate_file_hash(file_path)`**
+   - Reads the binary content of the image file.
+   - Computes the SHA-512 hash.
+   - Used to evaluate if the hash matches the desired prefix.
 
-#### `simulated_annealing_attempt()`
-- Core function that performs Simulated Annealing to modify the EXIF metadata iteratively.
+2. **`simulated_annealing_attempt()`**
+   - Performs Simulated Annealing:
+     - Randomly modifies the `UserComment` EXIF field of the image metadata.
+     - Evaluates the modified hash's similarity to the target prefix.
+     - Uses probabilistic logic to accept changes based on temperature and similarity.
 
-#### Helper Functions
+3. **`hash_similarity(current_hash, target_prefix)`**
+   - Measures the number of matching characters between the hash and the target prefix.
+   - Guides the algorithm toward better solutions.
 
-- `hash_similarity(current_hash, target_prefix)`: Measures how close a hash is to the desired prefix.
-- `acceptance_probability(temperature, new_similarity, old_similarity)`: Determines the probability of accepting a worse solution to escape local optima.
+4. **`acceptance_probability(temperature, new_similarity, old_similarity)`**
+   - Implements the Simulated Annealing acceptance rule:
+     - Accepts better solutions outright.
+     - Accepts worse solutions probabilistically, depending on the temperature.
 
-#### `modify_metadata_with_multiprocessing()`
-- Leverages the `multiprocessing` module to run multiple Simulated Annealing attempts in parallel.
+5. **`modify_metadata_with_multiprocessing()`**
+   - Divides the computational workload among multiple workers.
+   - Each worker executes `simulated_annealing_attempt()` independently, using unique random seeds.
 
-#### CLI
-- The `argparse` module enables command-line interaction for user customization.
+---
 
-## Results
+## Simulated Annealing Explained
 
-### Output Image
-- The modified image is saved to the specified path.
+### What is Simulated Annealing?
+Simulated Annealing is an optimization technique inspired by the physical annealing process, where a material is heated and then slowly cooled to achieve a stable state.
 
-### Hashes
-- The script prints the original and modified hash, along with success status.
+### How It Works in This Code:
 
-## Performance
-The tool uses advanced techniques to ensure efficiency:
+1. **Initialization**:
+   - Start with the original hash and metadata.
+   - Set an initial temperature.
 
-- **Simulated Annealing** minimizes unnecessary iterations.
-- **Multiprocessing** distributes computational tasks, reducing runtime on multi-core processors.
+2. **Random Modification**:
+   - Change the `UserComment` field with a random value.
 
-## Limitations
+3. **Evaluation**:
+   - Compare the modified hash to the target prefix using `hash_similarity()`.
 
-- **Computationally Intensive**: High `--max_attempts` and many workers can strain resources.
-- **Dependency on Metadata**: Some images may lack editable EXIF metadata.
+4. **Acceptance Logic**:
+   - If the modification improves the hash, accept it.
+   - If the modification worsens the hash, accept it with a probability determined by the current temperature.
 
-## Applications
+5. **Cooling**:
+   - Gradually reduce the temperature, focusing the search on fine-tuned improvements.
 
-- **Security Research**: Testing hash collision vulnerabilities.
-- **Digital Forensics**: Manipulating and analyzing file integrity.
-- **Data Watermarking**: Customizing image metadata for branding.
+6. **Termination**:
+   - Stop when the target prefix is achieved or the maximum attempts are reached.
 
-## Future Improvements
+---
 
-- **Enhanced Hash Functions**: Support other hashing algorithms (e.g., MD5, SHA-256).
-- **GUI Interface**: Add a user-friendly interface for broader usability.
-- **Dynamic Metadata**: Automatically identify other editable metadata fields.
+## Multiprocessing Explained
 
-## Author
-**Victor Wafula Simiyu**  
-Software Engineer | Optimization Specialist
+### Why Use Multiprocessing?
+Simulated Annealing can be computationally intensive. By running multiple independent annealing processes in parallel, the solution space is explored more efficiently.
+
+### How It's Implemented:
+
+1. **Task Division**:
+   - The total number of attempts is split evenly across multiple workers.
+
+2. **Independent Execution**:
+   - Each worker runs `simulated_annealing_attempt()` with a unique random seed.
+
+3. **Result Aggregation**:
+   - Workers report back as soon as one of them achieves the desired hash prefix.
+
+---
+
+## How We Achieve Exceptional Performance
+
+### Factors Contributing to Speed:
+
+1. **Simulated Annealing**:
+   - Focuses on promising areas of the solution space, avoiding exhaustive brute force.
+
+2. **Multiprocessing**:
+   - Utilizes multiple CPU cores to explore independent solution paths simultaneously.
+
+3. **Efficient Hash Evaluation**:
+   - Calculates and compares hashes incrementally, minimizing unnecessary computation.
+
+### Pseudocode Representation
+
+```plaintext
+1. Read the input image and calculate its hash.
+2. Initialize Simulated Annealing parameters (temperature, cooling rate, etc.).
+3. Divide tasks among multiple workers:
+   - Each worker performs:
+     a. Randomly modify image metadata.
+     b. Calculate the hash of the modified image.
+     c. Compare the hash with the target prefix.
+     d. Accept or reject the change based on Simulated Annealing rules.
+     e. Repeat until a match is found or attempts are exhausted.
+4. Combine results from all workers.
+5. Save the modified image if the target prefix is achieved.
+```
+
+---
+
+## Output
+
+### If Successful:
+- Saves the modified image to the specified `output_image` path.
+- Prints the original and modified hashes.
+
+### If Unsuccessful:
+- Reports failure after exhausting all attempts.
+
+---
+
+## Potential Applications
+
+- **Research**:
+  - Explore hash collision vulnerabilities.
+- **Security**:
+  - Test hash-based integrity checks.
+- **Digital Forensics**:
+  - Embed metadata for tracking or identification.
+
+---
 
 ## License
+
 This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
