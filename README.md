@@ -42,7 +42,7 @@ This tool is a Python-based implementation that modifies an image's metadata to 
 
 ```bash
 git clone https://github.com/Wafulah/ai-image-detector.git
-cd image-hash-spoofing
+
 ```
 
 ### Install Dependencies
