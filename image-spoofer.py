@@ -1,67 +1,66 @@
 import argparse
 import hashlib
 from PIL import Image
-import numpy as np
-import multiprocessing
+import piexif
 import os
+import multiprocessing
 
-# Helper function to calculate the SHA-512 hash of an image
-def calculate_image_hash(image_path):
-    with open(image_path, "rb") as f:
-        img_data = f.read()
-    return hashlib.sha512(img_data).hexdigest()
 
-# Modify pixels to embed a secret pattern while aiming for a target hash prefix
-def modify_image_for_target_hash(image_path, target_hash_prefix, output_path, max_attempts=10000, num_workers=4):
-    # Open image and convert to RGB
-    image = Image.open(image_path).convert('RGB')
-    pixels = np.array(image)
-    original_hash = calculate_image_hash(image_path)
+# Function to calculate the hash of an image file
+def calculate_file_hash(file_path):
+    with open(file_path, "rb") as f:
+        file_data = f.read()
+    return hashlib.sha512(file_data).hexdigest()
 
-    flat_pixels = pixels.flatten()
-    modified_pixels = flat_pixels.copy()
 
-    # Initialize a pool for parallel processing
-    pool = multiprocessing.Pool(num_workers)
-
-    # Create tasks to modify random pixels
-    tasks = []
-    for _ in range(max_attempts):
-        idx = np.random.randint(len(modified_pixels))
-        tasks.append((flat_pixels, pixels.shape, idx, output_path, target_hash_prefix))
-
-    # Process tasks in parallel
-    for modified_hash in pool.imap_unordered(attempt_modification, tasks):
-        if modified_hash:
-            pool.terminate()  # Stop further processing once a match is found
-            return {
-                "original_hash": original_hash,
-                "modified_hash": modified_hash,
-                "is_modified": original_hash != modified_hash,
-                "output_path": output_path
-            }
-
-    raise ValueError(f"Unable to achieve target hash prefix '{target_hash_prefix}' after {max_attempts} attempts.")
-
-# Function to modify a single attempt (used in parallel processing)
+# Worker function to modify metadata and check for the desired hash prefix
 def attempt_modification(args):
-    flat_pixels, pixels_shape, idx, image_path, target_hash_prefix = args
-    modified_pixels = flat_pixels.copy()
+    input_path, target_prefix, output_path, attempt = args
 
-    # Modify the pixel
-    modified_pixels[idx] = (modified_pixels[idx] + 1) % 256
+    # Load the image
+    image = Image.open(input_path)
+    exif_dict = piexif.load(image.info.get("exif", piexif.dump({})))
 
-    # Save the modified image temporarily
-    temp_image = Image.fromarray(modified_pixels.reshape(pixels_shape).astype('uint8'))
-    temp_image.save(image_path)
+    # Add or modify a custom EXIF tag for hash spoofing
+    if "Exif" not in exif_dict:
+        exif_dict["Exif"] = {}
 
-    # Check the hash of the modified image
-    modified_hash = calculate_image_hash(image_path)
-    
-    # Return the modified hash if it starts with the target prefix
-    if modified_hash.startswith(target_hash_prefix):
+    spoofing_key = piexif.ExifIFD.UserComment
+    exif_dict["Exif"][spoofing_key] = f"Attempt {attempt}".encode("utf-8")
+
+    # Save the modified image with updated metadata
+    modified_exif_bytes = piexif.dump(exif_dict)
+    image.save(output_path, exif=modified_exif_bytes)
+
+    # Calculate the hash of the modified file
+    modified_hash = calculate_file_hash(output_path)
+
+    # Check if the hash starts with the target prefix
+    if modified_hash.startswith(target_prefix):
         return modified_hash
     return None
+
+
+# Modify image metadata to achieve the desired hash prefix
+def modify_metadata_for_target_hash(input_path, target_prefix, output_path, max_attempts=100000, num_workers=4):
+    original_hash = calculate_file_hash(input_path)
+
+    # Create tasks for multiprocessing
+    tasks = [(input_path, target_prefix, output_path, attempt) for attempt in range(max_attempts)]
+
+    # Use multiprocessing to attempt modifications in parallel
+    with multiprocessing.Pool(num_workers) as pool:
+        for result in pool.imap_unordered(attempt_modification, tasks):
+            if result:  # If a successful modification is found
+                return {
+                    "original_hash": original_hash,
+                    "modified_hash": result,
+                    "is_modified": original_hash != result,
+                    "output_path": output_path,
+                }
+
+    raise ValueError(f"Unable to achieve target hash prefix '{target_prefix}' after {max_attempts} attempts.")
+
 
 # Main function with argparse for command-line interaction
 def main():
@@ -73,7 +72,7 @@ def main():
 
     # Perform hash spoofing
     try:
-        result = modify_image_for_target_hash(args.input_image, args.target_prefix, args.output_image)
+        result = modify_metadata_for_target_hash(args.input_image, args.target_prefix, args.output_image)
         print(f"Original image hash: {result['original_hash']}")
         print(f"Modified image hash: {result['modified_hash']}")
         print(f"Hashes are different: {result['is_modified']}")
@@ -81,6 +80,7 @@ def main():
             print(f"Modified image saved to {result['output_path']}")
     except ValueError as e:
         print(e)
+
 
 if __name__ == "__main__":
     main()
