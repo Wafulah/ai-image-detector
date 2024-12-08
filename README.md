@@ -41,7 +41,7 @@ This tool is a Python-based implementation that modifies an image's metadata to 
 ### Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/image-hash-spoofing.git
+git clone https://github.com/Wafulah/ai-image-detector.git
 cd image-hash-spoofing
 ```
 
@@ -58,7 +58,7 @@ pip install -r requirements.txt
 Run the script from the command line using the following syntax:
 
 ```bash
-python hash_spoof.py <target_prefix> <input_image> <output_image> [--max_attempts N] [--num_workers W] [--initial_temp T] [--cooling_rate R]
+python image-spoofer.py <target_prefix> <input_image> <output_image> [--max_attempts N] [--num_workers W] [--initial_temp T] [--cooling_rate R]
 ```
 
 ### Arguments
@@ -76,7 +76,7 @@ python hash_spoof.py <target_prefix> <input_image> <output_image> [--max_attempt
 ### Example
 
 ```bash
-python hash_spoof.py f8b2 "input.jpg" "output.jpg" --max_attempts 50000 --num_workers 6 --initial_temp 1200 --cooling_rate 0.98
+python image-spoofer.py f8b2 "input.jpg" "output.jpg" --max_attempts 50000 --num_workers 6 --initial_temp 1200 --cooling_rate 0.98
 ```
 
 ---
